@@ -1,0 +1,32 @@
+# ========== UNITY ==========
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+MemoryCaptures/
+UserSettings/
+
+# Rider
+.idea/
+*.sln
+*.csproj
+*.pidb
+*.user
+*.unityproj
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Crash reports
+sysinfo.txt
+
+# Cache
+*.apk
+*.keystore
+
+# ========== DO NOT IGNORE ==========
+!*.meta

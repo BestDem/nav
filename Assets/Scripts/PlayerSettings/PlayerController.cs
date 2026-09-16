@@ -81,7 +81,6 @@ public class PlayerController : MonoBehaviour
 
     private void Jump()
     {
-        Debug.Log("Прыжок");
         velocity.y = Mathf.Sqrt(jumpForce * -2f * GRAVITY_VALUE);
     }
 

@@ -8,7 +8,6 @@ public class SpawnPeople : MonoBehaviour
     [SerializeField] private List<Transform> bisyPointsList = new List<Transform>();
     [SerializeField] private BaseTimer baseTimer;
     [SerializeField] private GameObject prefPeople;
-    [SerializeField] private GameObject[] spawnedPeople;
     private int currentCountPeople = 0;
     private int maxPopleInVagon;
     private void Start()
@@ -40,7 +39,8 @@ public class SpawnPeople : MonoBehaviour
             bisyPointsList.Add(ob);
             pointsList.RemoveAt(idFreePoint);
 
-            Instantiate(prefPeople, ob);
+            GameObject spP = Instantiate(prefPeople, ob);
+            ControllerPeople.singltonePeople.AddPeople(spP);
             currentCountPeople += 1;
         }
     }
@@ -59,6 +59,8 @@ public class SpawnPeople : MonoBehaviour
 
             pointsList.Add(ob);
             bisyPointsList.RemoveAt(idFreePoint);
+            
+            ControllerPeople.singltonePeople.RemovePeople(ob.GetChild(0).gameObject);
             
             for(int j = ob.transform.childCount - 1; j >= 0; j--)
                 Destroy(ob.transform.GetChild((j)).gameObject);

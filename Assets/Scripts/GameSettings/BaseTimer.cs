@@ -9,6 +9,8 @@ public class BaseTimer : ScriptableObject
     [SerializeField] private int minAddPeopleOnStation;
     [SerializeField] private int maxRemovePeopleOnStation;
     [SerializeField] private int minRemovePeopleOnStation;
+    [SerializeField] private int maxEvilPeople;
+    [SerializeField] private int minEvilPeople;
 
     public float TimeOnStation => timeOnStation;
     public float CountStation => countStation;
@@ -16,4 +18,6 @@ public class BaseTimer : ScriptableObject
     public int MinAddPeopleOnStation => minAddPeopleOnStation;
     public int MaxRemovePeopleOnStation => maxRemovePeopleOnStation;
     public int MinRemovePeopleOnStation => minRemovePeopleOnStation;
+    public int MaxEvilPeople => maxEvilPeople;
+    public int MinEvilPeople => minEvilPeople;
 }

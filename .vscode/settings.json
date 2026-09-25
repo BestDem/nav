@@ -67,6 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "Metro.slnx",
+    "dotnet.defaultSolution": "nav.slnx",
     "dotnet.enableWorkspaceBasedDevelopment": false
 }

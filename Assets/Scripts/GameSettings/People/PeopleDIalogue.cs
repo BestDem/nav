@@ -11,6 +11,8 @@ public class PeopleDIalogue : IPeople
     {
         base.Use();
 
-        Debug.Log("Hello, I am an evil person.");
+        var dialogue = GetComponent<PassengerDialogue>();
+        if (dialogue == null) dialogue = gameObject.AddComponent<PassengerDialogue>();
+        VSMDialogueWindow.Open(dialogue);
     }
 }

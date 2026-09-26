@@ -12,9 +12,24 @@ public class DialogueResultsUI : MonoBehaviour
     [SerializeField] private TMP_Text strengths;
     [SerializeField] private TMP_Text mistakes;
 
+    private PassengerDialogue subscribed;
+
+    private void Awake()
+    {
+        // Wire the existing Main/Canvas/DIalogue UI without rewriting the scene.
+        if (gameObject.name == "DIalogue" && GetComponent<DialogueUI>() == null)
+            gameObject.AddComponent<DialogueUI>().ConfigureStandalone();
+    }
+
+    private void OnDestroy()
+    {
+        if (subscribed != null) subscribed.OnDialogueFinished -= Show;
+    }
+
     public void Subscribe(PassengerDialogue passenger)
     {
-        passenger.OnDialogueFinished -= Show;
+        if (subscribed != null) subscribed.OnDialogueFinished -= Show;
+        subscribed = passenger;
         passenger.OnDialogueFinished += Show;
     }
 
@@ -22,19 +37,19 @@ public class DialogueResultsUI : MonoBehaviour
     {
         var r = data.result;
 
-        canvas.SetActive(true);
+        if (canvas != null) canvas.SetActive(true);
 
-        score.text = r.score.ToString();
-        safety.text = r.safetyScore.ToString();
-        loyalty.text = r.loyaltyScore.ToString();
-        outcome.text = r.outcome;
-        summary.text = r.summary;
-        strengths.text = string.Join("\n• ", r.strengths ?? new string[0]);
-        mistakes.text = string.Join("\n• ", r.mistakes ?? new string[0]);
+        if (score != null) score.text = r.score.ToString();
+        if (safety != null) safety.text = r.safetyScore.ToString();
+        if (loyalty != null) loyalty.text = r.loyaltyScore.ToString();
+        if (outcome != null) outcome.text = r.outcome;
+        if (summary != null) summary.text = r.summary;
+        if (strengths != null) strengths.text = string.Join("\n• ", r.strengths ?? new string[0]);
+        if (mistakes != null) mistakes.text = string.Join("\n• ", r.mistakes ?? new string[0]);
     }
 
     public void Close()
     {
-        canvas.SetActive(false);
+        if (canvas != null) canvas.SetActive(false);
     }
 }

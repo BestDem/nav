@@ -16,7 +16,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private CharacterController characterController;
     [SerializeField] private GameObject Head;
 
-    private PlayerInput playerInput;
+    private PlayerInput playerInput = new PlayerInput();
 
     private Vector3 velocity;
     private bool canMove = false;
@@ -24,10 +24,15 @@ public class PlayerController : MonoBehaviour
     private float moveSpeed;
     private float xRotation;
 
+    private void OnEnable()
+    {
+        // Start does not run again after scripts reload during Play Mode.
+        playerInput ??= new PlayerInput();
+    }
+
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        playerInput = new PlayerInput();
+        MenuInputGate.ApplyCursor();
         velocity = Vector3.zero;
     }
 
@@ -40,6 +45,8 @@ public class PlayerController : MonoBehaviour
         HandleJump();
     }
 
+    private void LateUpdate() { MenuInputGate.ApplyCursor(); }
+
     private void GetPlayerInput()
     {
         moveSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
@@ -51,7 +58,7 @@ public class PlayerController : MonoBehaviour
 
     public void Movement()
     {
-        if (!canMove)
+        if (!canMove && !MenuInputGate.IsBlocked)
         {
             Vector3 forwardMovement = transform.forward * playerInput.movement.y * moveSpeed * Time.deltaTime;
             Vector3 rightMovement = transform.right * playerInput.movement.x * moveSpeed * Time.deltaTime;
@@ -73,7 +80,7 @@ public class PlayerController : MonoBehaviour
 
     private void HandleJump()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && characterController.isGrounded)
+        if (!canMove && !MenuInputGate.IsBlocked && Input.GetKeyDown(KeyCode.Space) && characterController.isGrounded)
         {
             Jump();
         }
@@ -86,7 +93,7 @@ public class PlayerController : MonoBehaviour
 
     private void Look()
     {
-        if(!blockLook)
+        if(!blockLook && !MenuInputGate.IsBlocked)
         {
             transform.Rotate(0, playerInput.mouse.x * MouseSens, 0);
             xRotation -= playerInput.mouse.y * MouseSens;
@@ -110,8 +117,7 @@ public class PlayerController : MonoBehaviour
 
     public void UnblockCursor()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        MenuInputGate.ApplyCursor();
     }
 }
 public class PlayerInput

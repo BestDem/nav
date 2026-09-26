@@ -7,6 +7,10 @@ public class VSMGameSession : MonoBehaviour
     public static VSMGameSession Instance { get; private set; }
 
     public string SessionId { get; private set; }
+    public bool IsReady { get; private set; }
+    private bool loading;
+    public bool IsLoading => loading;
+    public string LastError { get; private set; }
     private readonly List<GameScenario> available = new();
 
     public IReadOnlyList<GameScenario> Available => available;
@@ -25,7 +29,13 @@ public class VSMGameSession : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        OnWebAuthenticationReady();
+
+    }
+
+    private void Start()
+    {
+        if (VSMApiClient.Instance != null && VSMApiClient.Instance.HasToken)
+            CreateOrResumeSession();
     }
 
     public void OnWebAuthenticationReady()
@@ -35,6 +45,11 @@ public class VSMGameSession : MonoBehaviour
 
     public void CreateOrResumeSession()
     {
+        if (loading || IsReady || VSMApiClient.Instance == null || !VSMApiClient.Instance.HasToken)
+            return;
+        LastError = null;
+        loading = true;
+        if (!string.IsNullOrEmpty(SessionId)) { LoadScenarios(); return; }
         StartCoroutine(VSMApiClient.Instance.PostJson(
             "/api/game/sessions",
             "",
@@ -42,7 +57,7 @@ public class VSMGameSession : MonoBehaviour
             {
                 var r = JsonUtility.FromJson<GameSessionResponse>(response);
 
-                if (r?.data == null)
+                if (r?.data == null || string.IsNullOrEmpty(r.data.id))
                 {
                     Error("Не удалось создать игровую сессию.");
                     return;
@@ -75,6 +90,8 @@ public class VSMGameSession : MonoBehaviour
                     if (scenario != null && scenario.status == "pending")
                         available.Add(scenario);
 
+                loading = false;
+                IsReady = true;
                 OnSessionReady?.Invoke();
             },
             ApiError
@@ -101,6 +118,8 @@ public class VSMGameSession : MonoBehaviour
 
     private void Error(string message)
     {
+        loading = false;
+        LastError = message;
         Debug.LogError(message);
         OnError?.Invoke(message);
     }

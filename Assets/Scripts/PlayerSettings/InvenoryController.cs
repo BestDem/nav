@@ -9,6 +9,11 @@ public class InvenoryController : MonoBehaviour
     
     private void Update()
     {
+        if (MenuInputGate.IsBlocked)
+        {
+            if (aim != null) aim.SetActive(false);
+            return;
+        }
         CastForwardRay();
     }
     private void CastForwardRay()

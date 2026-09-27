@@ -39,6 +39,7 @@ public class SpawnPeople : MonoBehaviour
             pointsList.RemoveAt(idFreePoint);
 
             GameObject spP = Instantiate(prefPeople, ob);
+            spP.transform.rotation = ob.transform.rotation;
             ControllerPeople.singltonePeople.AddPeople(spP);
             currentCountPeople += 1;
         }

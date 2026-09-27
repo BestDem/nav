@@ -25,7 +25,7 @@ public class VSMApiClient : MonoBehaviour
 
     public void SetAccessToken(string token)
     {
-        AccessToken = token;
+        AccessToken = token?.Trim();
         Debug.Log("VSM: token received from website.");
     }
 
@@ -56,6 +56,7 @@ public class VSMApiClient : MonoBehaviour
 
     private void Prepare(UnityWebRequest r)
     {
+        r.timeout = 90;
         r.SetRequestHeader("Accept", "application/json");
         r.SetRequestHeader("Authorization", "Bearer " + AccessToken);
     }
@@ -67,6 +68,12 @@ public class VSMApiClient : MonoBehaviour
         if (r.result == UnityWebRequest.Result.Success)
             ok?.Invoke(body);
         else
-            fail?.Invoke(r.responseCode, body);
+        {
+            // Transport failures often have no response body or HTTP status.
+            string detail = $"{r.method} {r.uri.GetLeftPart(UriPartial.Path)}: {r.result}; {r.error}";
+            if (!string.IsNullOrWhiteSpace(body)) detail += "\n" + body;
+            if (!string.IsNullOrEmpty(AccessToken)) detail = detail.Replace(AccessToken, "[redacted]");
+            fail?.Invoke(r.responseCode, detail);
+        }
     }
 }

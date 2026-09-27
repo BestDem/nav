@@ -59,7 +59,7 @@ public class ControllerPeople : MonoBehaviour
 
     private void AddEvilPeople(GameObject people)
     {
-        int r = Random.Range(0, 2);
+        int r = 0;
 
         switch (r)
         {
@@ -67,9 +67,9 @@ public class ControllerPeople : MonoBehaviour
                 people.AddComponent<PeopleDIalogue>();
                 break;
 
-            case 1:
-                people.AddComponent<FeelBadPeople>();
-                break;
+            //case 1:
+            //    people.AddComponent<FeelBadPeople>();
+            //    break;
         }
 
         peopleEvil.Add(people);

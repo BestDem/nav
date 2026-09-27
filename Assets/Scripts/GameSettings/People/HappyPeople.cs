@@ -1,9 +1,13 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class HappyPeople : IPeople
 {
+    private Image imageTimer;
     private void Start()
     {
+        imageTimer = gameObject.GetComponentInChildren<Image>();
+        imageTimer.fillAmount = 0;
         isEvil = false;
 
         int randomNumber = Random.Range(0, 10);

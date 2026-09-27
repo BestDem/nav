@@ -2,6 +2,7 @@ using UnityEngine;
 
 public abstract class IPeople : MonoBehaviour, InteractObject
 {
+    
     protected bool haveTicket;
     protected bool isEvil = true;
     public bool HaveTicket { get => haveTicket; set => haveTicket = value; }

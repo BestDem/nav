@@ -7,7 +7,7 @@ public class HappyPeople : IPeople
     private void Start()
     {
         imageTimer = gameObject.GetComponentInChildren<Image>();
-        imageTimer.fillAmount = 0;
+        if (imageTimer != null) imageTimer.enabled = false;
         isEvil = false;
 
         int randomNumber = Random.Range(0, 10);

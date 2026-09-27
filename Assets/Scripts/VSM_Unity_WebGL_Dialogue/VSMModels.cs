@@ -28,6 +28,11 @@ using System;
 
 [Serializable] public class GameScenario
 {
+    public int decisionTimeLimitSeconds;
+    public string decisionDeadlineAt;
+    public string decisionReceivedAt;
+    public ScenarioEvent[] availableEvents;
+    public string[] verifiedEvents;
     public int positionInSession;
     public string code;
     public string title;
@@ -106,3 +111,13 @@ using System;
     public int score;
     public string comment;
 }
+
+[Serializable] public class ScenarioEvent { public string code; public string label; }
+[Serializable] public class GameHistoryResponse { public string status; public GameHistoryData data; }
+[Serializable] public class GameHistoryData
+{
+    public GameScenario scenario;
+    public GameHistoryMessage[] history;
+    public AssessmentResult assessment;
+}
+[Serializable] public class GameHistoryMessage { public string role; public string content; public string action; }

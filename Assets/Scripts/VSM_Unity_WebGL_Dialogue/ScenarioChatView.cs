@@ -90,7 +90,7 @@ public sealed class ScenarioChatView
         }
     }
 
-    public void AddMessage(string text, bool conductor, string suffix = "")
+    public void AddMessage(string text, bool conductor, string suffix = "", string authorName = null)
     {
         Canvas.ForceUpdateCanvases();
         float width = Mathf.Max(180, scroll.viewport.rect.width - 12);
@@ -102,7 +102,7 @@ public sealed class ScenarioChatView
         float textHeight = body.GetPreferredValues(text, bubbleWidth - 30, Mathf.Infinity).y;
         float height = Mathf.Max(90, textHeight + 56);
         row.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
-        var author = Label("Speaker", bubble, (conductor ? "ПРОВОДНИК" : "ПАССАЖИР") + suffix, 12,
+        var author = Label("Speaker", bubble, (authorName ?? (conductor ? "ПРОВОДНИК" : "ПАССАЖИР")) + suffix, 12,
             conductor ? new Color32(100, 135, 158, 255) : new Color32(222, 243, 255, 255));
         Place(author.rectTransform, new Vector2(0, 1), Vector2.one);
         author.rectTransform.offsetMin = new Vector2(15, -32);

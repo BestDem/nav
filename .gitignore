@@ -30,3 +30,8 @@ sysinfo.txt
 
 # ========== DO NOT IGNORE ==========
 !*.meta
+
+# Local deployment archives and test credentials
+/Delivery/
+/Delivery.meta
+**/vsm-test-token.txt

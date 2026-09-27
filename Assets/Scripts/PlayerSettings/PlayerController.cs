@@ -23,6 +23,8 @@ public class PlayerController : MonoBehaviour
     private bool blockLook = false;
     private float moveSpeed;
     private float xRotation;
+    private Vector2 touchLook;
+    private bool touchJump;
 
     private void OnEnable()
     {
@@ -32,6 +34,7 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        if (GetComponent<MobileGameControls>() == null) gameObject.AddComponent<MobileGameControls>();
         MenuInputGate.ApplyCursor();
         velocity = Vector3.zero;
     }
@@ -52,8 +55,15 @@ public class PlayerController : MonoBehaviour
         moveSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
         playerInput.movement.x = Input.GetAxis("Horizontal");
         playerInput.movement.y = Input.GetAxis("Vertical");
-        playerInput.mouse.x = Input.GetAxis("Mouse X");
-        playerInput.mouse.y = Input.GetAxis("Mouse Y");
+        var touch = MobileGameControls.Instance;
+        if (touch != null) playerInput.movement += touch.Movement;
+        playerInput.movement = Vector2.ClampMagnitude(playerInput.movement, 1);
+        // UI touches must not also rotate the camera through emulated mouse input.
+        bool mouseLook = !Application.isMobilePlatform && Input.touchCount == 0;
+        playerInput.mouse.x = mouseLook ? Input.GetAxis("Mouse X") : 0;
+        playerInput.mouse.y = mouseLook ? Input.GetAxis("Mouse Y") : 0;
+        touchLook = touch != null ? touch.ConsumeLook() : Vector2.zero;
+        touchJump = touch != null && touch.ConsumeJump();
     }
 
     public void Movement()
@@ -80,7 +90,7 @@ public class PlayerController : MonoBehaviour
 
     private void HandleJump()
     {
-        if (!canMove && !MenuInputGate.IsBlocked && Input.GetKeyDown(KeyCode.Space) && characterController.isGrounded)
+        if (!canMove && !MenuInputGate.IsBlocked && (Input.GetKeyDown(KeyCode.Space) || touchJump) && characterController.isGrounded)
         {
             Jump();
         }
@@ -95,8 +105,8 @@ public class PlayerController : MonoBehaviour
     {
         if(!blockLook && !MenuInputGate.IsBlocked)
         {
-            transform.Rotate(0, playerInput.mouse.x * MouseSens, 0);
-            xRotation -= playerInput.mouse.y * MouseSens;
+            transform.Rotate(0, playerInput.mouse.x * MouseSens + touchLook.x, 0);
+            xRotation -= playerInput.mouse.y * MouseSens + touchLook.y;
 
             xRotation = Mathf.Clamp(xRotation, -80f, 80f);
 

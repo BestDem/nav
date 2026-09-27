@@ -37,7 +37,9 @@ public class VSMApiClient : MonoBehaviour
 
         using var r = UnityWebRequest.Get(baseUrl + endpoint);
         Prepare(r);
-        yield return r.SendWebRequest();
+        // Avoid attaching a native coroutine continuation that can outlive an Editor domain reload.
+        var operation = r.SendWebRequest();
+        while (!operation.isDone) yield return null;
         Handle(r, ok, fail);
     }
 
@@ -50,7 +52,8 @@ public class VSMApiClient : MonoBehaviour
         r.downloadHandler = new DownloadHandlerBuffer();
         r.SetRequestHeader("Content-Type", "application/json");
         Prepare(r);
-        yield return r.SendWebRequest();
+        var operation = r.SendWebRequest();
+        while (!operation.isDone) yield return null;
         Handle(r, ok, fail);
     }
 

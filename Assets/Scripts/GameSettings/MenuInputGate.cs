@@ -17,7 +17,9 @@ public static class MenuInputGate
     public static void Release(Object owner) { owners.Remove(owner); ApplyCursor(); }
     public static void ApplyCursor()
     {
-        Cursor.lockState = IsBlocked ? CursorLockMode.None : CursorLockMode.Locked;
+        bool touchDevice = Application.isMobilePlatform || Input.touchSupported;
+        bool freeCursor = IsBlocked || touchDevice;
+        Cursor.lockState = freeCursor ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = IsBlocked;
     }
 }

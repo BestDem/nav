@@ -9,6 +9,9 @@ public class DialogueUI : MonoBehaviour
 {
     private static DialogueUI active;
     private static int escapeFrame = -1;
+    public static void HideForTripCompletion() { if (active != null && active.visible) active.Hide(); }
+    public static bool IsViewing(PassengerDialogue target) => active != null && active.visible && active.passenger == target;
+    public static string CurrentAssessmentText => AssessmentText.Format(active != null ? active.passenger?.Assessment?.result : null);
     public static bool IsScenarioVisible => active != null && active.visible;
     public static bool ConsumesEscapeThisFrame => IsScenarioVisible || escapeFrame == Time.frameCount;
     private ScenarioChatView view;
@@ -73,10 +76,7 @@ public class DialogueUI : MonoBehaviour
         view.Finish.onClick.AddListener(Finish);
         view.Hide.onClick.AddListener(Hide);
         view.Retry.onClick.AddListener(Retry);
-        view.Next.onClick.AddListener(Next);
-        passenger = GetComponent<PassengerDialogue>();
-        if (passenger == null) passenger = gameObject.AddComponent<PassengerDialogue>();
-        Bind(passenger);
+        view.Next.gameObject.SetActive(false);
         view.Screen.SetActive(false);
     }
 
@@ -94,11 +94,18 @@ public class DialogueUI : MonoBehaviour
         passenger.OnDialogueFinished -= Finished;
         passenger.OnError -= Error;
     }
+    public static void OpenPassenger(PassengerDialogue target)
+    {
+        if (target == null || !target.CanInteract || active == null) return;
+        active.Open(target);
+    }
     public void Open(PassengerDialogue target)
     {
         if (!configured) ConfigureStandalone();
         Bind(target);
-        attemptedStart = target.HasStarted;
+        attemptedStart = false;
+        notice = ""; pending = ""; submitted = false;
+        view.Input.text = "";
         renderedCount = -1;
         Show();
     }
@@ -125,10 +132,7 @@ public class DialogueUI : MonoBehaviour
             escapeFrame = Time.frameCount;
             Hide();
         }
-        if (Input.GetKeyDown(KeyCode.F) && Time.timeScale > 0 && (!visible || !view.Input.isFocused))
-        {
-            if (visible) Hide(); else Show();
-        }
+        if (visible && passenger == null) Hide();
         var session = VSMGameSession.Instance;
         if (visible && session != null && session.IsReady && !attemptedStart)
         {
@@ -144,9 +148,9 @@ public class DialogueUI : MonoBehaviour
 #else
         view.Voice.interactable = false;
 #endif
-        view.Finish.interactable = !passenger.IsBusy && (passenger.HasStarted || passenger.IsFinished);
+        view.Finish.interactable = !passenger.IsBusy && (passenger.CanFinish || passenger.IsFinished);
         view.FinishLabel.text = passenger.IsFinished ? "Закрыть" : "Завершить";
-        view.Next.gameObject.SetActive(passenger.IsFinished && session != null && session.Available.Count > 0);
+        view.Next.gameObject.SetActive(false);
         view.Retry.gameObject.SetActive(!passenger.IsBusy && !listening &&
             (!string.IsNullOrEmpty(passenger.LastError) || !string.IsNullOrEmpty(session?.LastError)));
         if (listening) view.Status.text = "Слушаю… Нажмите микрофон ещё раз, чтобы остановить.";
@@ -157,8 +161,7 @@ public class DialogueUI : MonoBehaviour
         else if (session == null || !session.IsReady) view.Status.text = VSMApiClient.Instance != null && VSMApiClient.Instance.HasToken ? "Загружаем сценарий…" : "Ожидаем авторизацию…";
         else if (passenger.Assessment != null)
         {
-            var r = passenger.Assessment.result;
-            view.Status.text = $"Диалог завершён · Оценка: {r.score}\nБезопасность: {r.safetyScore} · Лояльность: {r.loyaltyScore}\n{r.summary}";
+            view.Status.text = "Диалог завершён. Оценка и рекомендации — в чате.";
         }
         else view.Status.text = "";
         RenderHistory();
@@ -172,6 +175,11 @@ public class DialogueUI : MonoBehaviour
         view.ClearMessages();
         foreach (var turn in passenger.History) view.AddMessage(turn.Text, turn.Speaker != "Пассажир");
         if (submitted) view.AddMessage(pending, true, " · ОТПРАВЛЯЕТСЯ");
+        var r = passenger.Assessment?.result;
+        if (r != null)
+        {
+            view.AddMessage(AssessmentText.Format(r), true, authorName: "ОЦЕНКА И РЕКОМЕНДАЦИИ");
+        }
     }
     private void Submit(string text) { SendButton(); }
     public void SendButton()
@@ -209,18 +217,8 @@ public class DialogueUI : MonoBehaviour
         var session = VSMGameSession.Instance;
         if (session == null) return;
         if (!session.IsReady) { attemptedStart = false; session.CreateOrResumeSession(); }
-        else if (passenger.ShouldContinue && !string.IsNullOrWhiteSpace(view.Input.text)) SendButton();
         else passenger.OpenDialogue();
     }
-    private void Next()
-    {
-        passenger.SetScenario(null);
-        notice = ""; pending = ""; submitted = false;
-        view.Input.text = "";
-        attemptedStart = false;
-        renderedCount = -1;
-    }
-
     private void ToggleVoice()
     {
         if (listening) { StopVoice(); return; }
@@ -257,7 +255,15 @@ public class DialogueUI : MonoBehaviour
     }
     private void OnGUI()
     {
-        if (configured && !visible && Time.timeScale > 0 && GUI.Button(new Rect(20, 20, 230, 40), "Открыть сценарий · F")) Show();
+        if (!configured || visible || Time.timeScale <= 0) return;
+        var session = VSMGameSession.Instance;
+        if (session == null || !session.IsReady)
+        {
+            GUI.Box(new Rect(20, 20, 330, 40), session != null && !string.IsNullOrEmpty(session.LastError)
+                ? "Не удалось загрузить сценарии" : "Ожидаем авторизацию и сценарии…");
+            if (session != null && !session.IsLoading && !string.IsNullOrEmpty(session.LastError) &&
+                GUI.Button(new Rect(20, 65, 330, 36), "Повторить загрузку")) session.CreateOrResumeSession();
+        }
     }
     private void OnDisable() { StopVoice(); MenuInputGate.Release(this); }
     private void OnEnable() { if (visible) MenuInputGate.Acquire(this); }

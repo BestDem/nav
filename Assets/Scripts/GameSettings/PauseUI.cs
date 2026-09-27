@@ -19,7 +19,7 @@ public class PauseUI : MonoBehaviour
 
     public void GetInput()
     {
-        if (DialogueUI.IsScenarioVisible) return;
+        if (StationController.IsTripEnded || DialogueUI.IsScenarioVisible) return;
         if (isPause) Close();
         else
         {

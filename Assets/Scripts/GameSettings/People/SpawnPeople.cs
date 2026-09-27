@@ -3,71 +3,47 @@ using UnityEngine;
 
 public class SpawnPeople : MonoBehaviour
 {
-    [SerializeField] private List<Transform> pointsList = new List<Transform>();
-    [SerializeField] private List<Transform> bisyPointsList = new List<Transform>();
+    [SerializeField] private List<Transform> pointsList = new();
+    [SerializeField] private List<Transform> bisyPointsList = new();
     [SerializeField] private BaseTimer baseTimer;
     [SerializeField] private GameObject prefPeople;
-    private int currentCountPeople = 0;
-    private int maxPopleInVagon;
-    private void Start()
-    {
-        maxPopleInVagon = pointsList.Count;
-        SpawnPeopleEvent();
-    }
-    private void OnEnable()
-    {
-        StationController.ActionNextStation += RemovePopleOnStation;
-    }
-    private void OnDisable()
-    {
-        StationController.ActionNextStation -= RemovePopleOnStation;
-    }
+
+    private void Start() { SpawnPeopleEvent(); }
+    private void OnEnable() { StationController.ActionNextStation += RemovePopleOnStation; }
+    private void OnDisable() { StationController.ActionNextStation -= RemovePopleOnStation; }
 
     private void SpawnPeopleEvent()
     {
-        int countP = Random.Range(baseTimer.MinAddPeopleOnStation, baseTimer.MaxAddPeopleOnStation);
-        if(currentCountPeople + countP > maxPopleInVagon) return;
-        Debug.Log("Добавилось " + countP + " людей");
-
-        for (int i = 0; i < countP; i++)
+        // Fill the five seats; scenario allocation is separate from crowd spawning.
+        while (pointsList.Count > 0)
         {
-            int idFreePoint = Random.Range(0, pointsList.Count);
-
-            Transform ob = pointsList[idFreePoint];
-
-            bisyPointsList.Add(ob);
-            pointsList.RemoveAt(idFreePoint);
-
-            GameObject spP = Instantiate(prefPeople, ob);
-            spP.transform.rotation = ob.transform.rotation;
-            ControllerPeople.singltonePeople.AddPeople(spP);
-            currentCountPeople += 1;
+            int index = Random.Range(0, pointsList.Count);
+            var point = pointsList[index];
+            pointsList.RemoveAt(index);
+            bisyPointsList.Add(point);
+            var person = Instantiate(prefPeople, point);
+            person.transform.rotation = point.rotation;
+            ControllerPeople.singltonePeople.AddPeople(person);
         }
     }
 
     private void RemovePopleOnStation()
     {
-        int countP = Random.Range(baseTimer.MinRemovePeopleOnStation, baseTimer.MaxRemovePeopleOnStation);
-        if(currentCountPeople - countP < 0) return;
-        Debug.Log("Ушли " + countP + " людей");
-
-        for (int i = 0; i < countP; i++)
+        for (int i = bisyPointsList.Count - 1; i >= 0; i--)
         {
-            int idFreePoint = Random.Range(0, bisyPointsList.Count);
-
-            Transform ob = bisyPointsList[idFreePoint];
-
-            pointsList.Add(ob);
-            bisyPointsList.RemoveAt(idFreePoint);
-            
-            ControllerPeople.singltonePeople.RemovePeople(ob.GetChild(0).gameObject);
-            
-            for(int j = ob.transform.childCount - 1; j >= 0; j--)
-                Destroy(ob.transform.GetChild((j)).gameObject);
-
-            currentCountPeople -= 1;
+            var point = bisyPointsList[i];
+            if (point.childCount == 0) continue;
+            var person = point.GetChild(0).gameObject;
+            var dialogue = person.GetComponent<PassengerDialogue>();
+            // Never destroy a passenger's in-flight request or unfinished scenario.
+            if (dialogue != null && (dialogue.IsBusy || DialogueUI.IsViewing(dialogue) ||
+                (dialogue.HasScenario && !dialogue.IsFinished))) continue;
+            ControllerPeople.singltonePeople.RemovePeople(person);
+            person.transform.SetParent(null);
+            Destroy(person);
+            bisyPointsList.RemoveAt(i);
+            pointsList.Add(point);
         }
-
         SpawnPeopleEvent();
     }
 }

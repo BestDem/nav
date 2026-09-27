@@ -8,6 +8,10 @@ public class VSMGameSession : MonoBehaviour
 
     public string SessionId { get; private set; }
     public bool IsReady { get; private set; }
+    public const int ScenariosPerTrip = 10;
+    public int CompletedCount { get; private set; }
+    public bool TripComplete => IsReady && CompletedCount >= ScenariosPerTrip;
+    private readonly HashSet<string> completedCodes = new();
     private bool loading;
     public bool IsLoading => loading;
     public string LastError { get; private set; }
@@ -40,6 +44,19 @@ public class VSMGameSession : MonoBehaviour
 
     public void OnWebAuthenticationReady()
     {
+        CreateOrResumeSession();
+    }
+
+    public void PrepareTrip()
+    {
+        if (TripComplete)
+        {
+            SessionId = null;
+            IsReady = false;
+            available.Clear();
+            completedCodes.Clear();
+            CompletedCount = 0;
+        }
         CreateOrResumeSession();
     }
 
@@ -84,11 +101,31 @@ public class VSMGameSession : MonoBehaviour
                     return;
                 }
 
+                if (r.data.scenarios.Length != ScenariosPerTrip)
+                {
+                    Error("Сервер должен вернуть 10 сценариев для поездки.");
+                    return;
+                }
+                var codes = new HashSet<string>();
+                foreach (var item in r.data.scenarios)
+                {
+                    if (item == null || string.IsNullOrEmpty(item.code) || !codes.Add(item.code) ||
+                        (item.status != "pending" && item.status != "started" && item.status != "completed" && item.status != "assessed"))
+                    {
+                        Error("Сервер вернул некорректный или повторяющийся сценарий.");
+                        return;
+                    }
+                }
                 available.Clear();
+                completedCodes.Clear();
 
                 foreach (var scenario in r.data.scenarios)
-                    if (scenario != null && scenario.status == "pending")
-                        available.Add(scenario);
+                {
+                    if (scenario == null || string.IsNullOrEmpty(scenario.code)) continue;
+                    if (scenario.status == "assessed") completedCodes.Add(scenario.code);
+                    else available.Add(scenario);
+                }
+                CompletedCount = completedCodes.Count;
 
                 loading = false;
                 IsReady = true;
@@ -96,6 +133,19 @@ public class VSMGameSession : MonoBehaviour
             },
             ApiError
         ));
+    }
+
+    public void MarkAssessed(GameScenario scenario)
+    {
+        if (scenario != null) completedCodes.Add(scenario.code);
+        CompletedCount = completedCodes.Count;
+    }
+
+    public void ReturnScenario(GameScenario scenario)
+    {
+        if (scenario == null || completedCodes.Contains(scenario.code) ||
+            available.Exists(item => item.code == scenario.code)) return;
+        available.Add(scenario);
     }
 
     // Берёт случайный код и удаляет его из локального списка.

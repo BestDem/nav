@@ -18,6 +18,9 @@ public class ServiceClassMenu : MonoBehaviour
     private bool transitioning;
     private bool launching;
 
+    private void OnEnable() { MenuInputGate.Acquire(this); }
+    private void OnDisable() { MenuInputGate.Release(this); }
+
     private void Awake()
     {
         collapsedAnchor = shade.anchorMax;
@@ -72,6 +75,7 @@ public class ServiceClassMenu : MonoBehaviour
     {
         if (transitioning || launching || index < 0 || index >= serviceClasses.Length) return;
         ServiceClassSelection.Select(serviceClasses[index]);
+        VSMGameSession.Instance?.PrepareTrip();
         launching = true;
         selection.interactable = false;
         levelController.TeleportOnLevel(1);

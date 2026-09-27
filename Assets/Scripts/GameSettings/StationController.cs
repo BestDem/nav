@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using UnityEngine;
 
 public class StationController : MonoBehaviour
@@ -11,6 +10,8 @@ public class StationController : MonoBehaviour
     [SerializeField] private Screen_fader screen_Fader;
     private float time = 0;
     private int currentStation = 1;
+    private bool ended;
+    public static bool IsTripEnded => singltoneStationContr != null && singltoneStationContr.ended;
     private void Start()
     {
         if(singltoneStationContr == null)
@@ -26,6 +27,13 @@ public class StationController : MonoBehaviour
     }
     private void Update()
     {
+        if (ended || VSMGameSession.Instance == null || !VSMGameSession.Instance.IsReady) return;
+        // Finish on the tenth confirmed assessment, without waiting for a stop.
+        if (VSMGameSession.Instance.TripComplete)
+        {
+            EndTrip();
+            return;
+        }
         if(time > 0)
         {
             time -= Time.deltaTime;
@@ -36,13 +44,27 @@ public class StationController : MonoBehaviour
             screen_Fader.FadeIn();
             time = 10;
             Invoke("NextStationFade", 1);
-
-            if(currentStation == baseTimer.CountStation)
-            {
-                Debug.Log("Игра завершена");
-                ActionEndGame?.Invoke();
-            }
         }
+    }
+
+    private void EndTrip()
+    {
+        if (ended) return;
+        ended = true;
+        CancelInvoke();
+        string assessment = DialogueUI.CurrentAssessmentText;
+        DialogueUI.HideForTripCompletion();
+        TripCompletionView.Show(transform, assessment);
+        Time.timeScale = 0;
+        MenuInputGate.Acquire(this);
+        ActionEndGame?.Invoke();
+    }
+
+    private void OnDestroy()
+    {
+        MenuInputGate.Release(this);
+        if (ended) Time.timeScale = 1;
+        if (singltoneStationContr == this) singltoneStationContr = null;
     }
 
     private void NextStationFade()

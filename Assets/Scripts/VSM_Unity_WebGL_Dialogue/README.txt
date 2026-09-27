@@ -8,13 +8,14 @@ Scenario screen MVP (2026-09-26)
   scrollable history, blue passenger bubbles, white conductor bubbles, bottom
   composer with Send and microphone controls. Only API messages are displayed.
 - The scenario starts hidden and starts its dialogue only on first opening.
-- F opens/hides the scenario (except while typing into its input). Escape hides it without opening settings in the
-  same frame. When the scenario is hidden, Escape opens normal settings.
+- Aim at a scenario passenger within 3 metres and press F to open their dialogue.
+  Walls block interaction. Ordinary/assessed passengers have no F prompt.
+  Escape hides the chat without opening settings in the same frame.
 - MenuInputGate gives each menu its own input lock. Player movement, jump and
   mouse look cannot run while a menu holds a lock. Closing settings does not
   unlock the player if the scenario is still open.
 - «Завершить» calls conclude/assess. «Свернуть» keeps the session and pending
-  requests alive. A completed scenario can be followed by another pending one.
+  requests alive. To start another scenario, approach its assigned passenger.
 - Pending conductor text appears immediately; errors preserve the input.
 - Scene assets and API credentials are not rewritten by the layout builder.
 
@@ -29,17 +30,38 @@ Voice input:
   remains available. No microphone recording occurs in Editor.
 - Run `node Tests/voice-bridge.test.cjs` for browser-bridge contract checks.
 
-Validation: Editor and WebGL C# branches compile with the project's Unity
-references; speech bridge mock checks pass. Rendering an isolated Unity preview
-was declined, so the layout and actual microphone still need an in-editor /
-browser visual and functional check. Stop Play, wait for import, restart Play.
+Passenger scenarios (2026-09-27):
+- Contract: https://vsm-edu.ru/api/docs.json. Session creation/resumption returns
+  the session id; GET /api/game/sessions/{id}/scenarios supplies ten unique codes.
+- ControllerPeople assigns each code once, before interaction, with at most
+  max(3, BaseTimer.MaxEvilPeople) active scenario passengers at once. Others are
+  ordinary. Vacancies are refilled immediately; if everyone already had a scenario,
+  replacements arrive at the next stop.
+- Each passenger keeps their own history and scenario through hide/reopen.
+  GET /scenarios/{code} restores started/completed attempts after scene reload;
+  only pending attempts receive POST /start. History role/content fields were
+  verified against the sibling backend GameAiController and ScenarioAttempt.
+- POST /respond sends {answer}; conclude is allowed after a decision or expiry.
+  The conclusion reply is shown. The marker disappears on confirmed conclusion,
+  even if assess needs a retry. Assessment completion is counted once per code.
+- Timers use decisionTimeLimitSeconds/decisionDeadlineAt/decisionReceivedAt.
+  This is the server's FIRST-decision deadline, not a separate local chat timer.
+  Before a deadline exists, or after a decision is accepted, the full ring is
+  an active-scenario marker. Scenarios without a time limit also use this marker.
+- The five seats are populated; at stops only ordinary or assessed passengers
+  leave. Unfinished passengers and a passenger with an open results UI stay.
+  Stops continue until all ten are assessed. The tenth confirmed assessment
+  immediately stops play and opens the completion menu with a return-to-menu button.
+- Returning to the menu releases unfinished assignments for restored passengers;
+  selecting a new trip after ten assessments creates/resumes a new server session.
+- No availableEvents are fabricated: world-action verification is not implemented
+  by the text dialogue; such events must correspond to actions actually performed.
+- Run python3 Tests/ScenarioFlow/run.py for deterministic production-logic tests
+  with simulated Unity lifecycle/HTTP; no live scenario scores are changed.
+  Full rendering, raycast targeting and live AI still need a Unity Play Mode check.
 
-Implemented: authentication before session creation; scenario assignment on first
-passenger interaction; start → respond → conclude → assess; runtime dialogue UI,
-loading/error states, assessment, movement lock and duplicate-send protection.
-PeopleDIalogue connects dynamically spawned passengers. Service classes do not
-change backend requests yet. Bootstrap creates VSM_WEB_BRIDGE before the menu.
-Existing scene service objects are discarded by singleton guards.
+Service classes do not change backend requests. Bootstrap creates VSM_WEB_BRIDGE
+before the menu; existing scene service objects are discarded by singleton guards.
 
 Website integration (same page as Unity canvas):
 1. Define window.vsmGetAccessToken before createUnityInstance. It must return the
@@ -68,23 +90,19 @@ Website integration (same page as Unity canvas):
    in CORS. For iframe embedding, the accessor must exist in the frame containing
    Unity; no unrestricted postMessage listener is installed.
 
-No passwords or tokens are persisted, embedded in builds, or put in URLs.
-Authentication uses the website token; no Editor test-token fallback is provided.
+No tokens are embedded in builds or put in URLs.
+WebGL authentication uses the website token. Local test-token loading is disabled.
 Without a token, interaction explains that website authorization is pending.
 
-Current contract inherited from the existing Unity integration:
+Verified API routes:
 POST /api/game/sessions
 GET /api/game/sessions/{id}/scenarios
 POST /api/game/sessions/{id}/scenarios/{code}/start
+GET /api/game/sessions/{id}/scenarios/{code}
 POST .../respond with {"answer":"..."}
 POST .../conclude
 POST .../assess
 Response DTOs: VSMModels.cs. No admin endpoints are called.
-
-Verification limitation (2026-09-26): vsm-edu.ru failed DNS resolution from the
-working environment, including an unrestricted retry. The adjacent backend
-repository confirms Bearer auth, but lacks the new game API. Therefore these
-routes/DTOs still require verification against the deployed docs.json.
 
 Live acceptance check:
 - Log in on the website, load WebGL, verify one session creation and scenarios GET.
@@ -93,3 +111,21 @@ Live acceptance check:
 - Reload game on account switch; verify assessment belongs to the logged-in user.
 - Do not automatically retry POST after ambiguous network failure: first confirm
   whether the backend already applied it. Manual retry is available in the UI.
+
+Touch controls and completion screen (source changes, no new player build):
+- PlayerController installs MobileGameControls on entering gameplay on every platform.
+- «Показать интерфейс» toggles movement, jump, interaction and settings.
+  The toggle remains tappable on touch devices; M toggles it on desktop outside menus.
+- Hold direction buttons to walk; swipe anywhere outside UI to look; «Поговорить» uses the
+  same 3 m, nearest-collider interaction as F. UI input is cleared on hide, menu
+  entry and focus loss. Keyboard movement still works.
+- On desktop, moving the mouse turns the camera without holding a button.
+  The cursor is hidden and locked during desktop gameplay, and released for menus/chat.
+  Touch devices keep pointer locking disabled so screen buttons remain tappable.
+- Touch look has no visible panel and works even with the controls hidden.
+- Completion uses an overlay Canvas at sorting order 1000. The tenth assessment
+  closes the scenario overlay and immediately shows the final screen, including
+  the last assessment in a scrollable panel and return-to-menu button.
+- ScenarioFlow now includes regression checks for completion with an open chat,
+  single presentation, input/time restoration and preservation of assessment text.
+- Device touch and visual layout still require Play Mode/device acceptance checks.
